@@ -13,6 +13,24 @@ A minimalist and elegant **Always-On Display (AOD)** toy designed specifically f
   <a href="https://github.com/Aureliink/Clock-AOD-Glyph-Toy/releases/latest">
     <img src="https://img.shields.io/badge/Download-APK-green?style=for-the-badge&logo=android" alt="Download APK">
   </a>
+
+  <br />
+  <br />
+  <span>The app is straightforward : it will just add a toy that you can use as an AOD vertical clock with a circular battery jauge.</span>
+  <br />
+  <span>An icon will also be shown for 3s when you change your ringer mode too (vibrate, silent, ringer).</span>
+</p>
+
+<br />
+
+## ☕ Support the project
+<p align="center">
+  <span>If you ever wanna offer me a croissant 🥐 : </span>
+  <br />
+  <br />
+  <a href="https://www.paypal.me/Mxiden">
+    <img src="https://img.shields.io/badge/Donate-PayPal-blue.svg?style=for-the-badge&logo=paypal" alt="Donate with PayPal">
+  </a>
 </p>
 
 ---
@@ -68,4 +86,4 @@ The app utilizes a BroadcastReceiver to listen for system audio changes (AudioMa
 
 ---
 
-### Disclaimer : this README was Generated with Gemini cause I'm too lazy and have too little knowledge about the Github world, I'd rather have it describe everything about the app... Since it made about 90% of it 😂
+### Disclaimer : this README was Generated with Gemini cause I'm too lazy and have too little knowledge about the Github world and what I should include here 😂
