@@ -27,15 +27,24 @@ class ClockToyService : Service() {
     private var isShowingIcon = false
     private var isGlyphConnected = false
     private val resetHandler = Handler(Looper.getMainLooper())
+    private var glyphMatrixManager: GlyphMatrixManager? = null
 
+    // Gère le changement de mode sonore (Vibreur, Sonnerie, Silence)
     private val ringerModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == AudioManager.RINGER_MODE_CHANGED_ACTION && context != null) {
                 val audioManager = context.getSystemService(AUDIO_SERVICE) as AudioManager
-                val batteryManager = context.getSystemService(BATTERY_SERVICE) as BatteryManager
-                val batteryPct = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
 
-                // On affiche l'icône de mode sonore temporairement
+                // On récupère les préférences pour savoir quel style de batterie afficher sur l'icône
+                val sharedPrefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+                val showBattery = sharedPrefs.getBoolean(Prefs.KEY_BATTERY, true)
+
+                val batteryPct = if (showBattery) {
+                    val bm = context.getSystemService(BATTERY_SERVICE) as BatteryManager
+                    bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                } else -1
+
+                // Affichage temporaire selon le mode actuel
                 when (audioManager.ringerMode) {
                     AudioManager.RINGER_MODE_VIBRATE -> showIconTemporarily(GlyphClockRenderer.renderVibrateIcon(batteryPct))
                     AudioManager.RINGER_MODE_SILENT -> showIconTemporarily(GlyphClockRenderer.renderSilentIcon(batteryPct))
@@ -45,12 +54,11 @@ class ClockToyService : Service() {
         }
     }
 
-
-    // This will refresh the glyph when tinkering with the settings
+    // Rafraîchit les Glyphs immédiatement quand on change un réglage dans l'appli
     private val refreshReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Prefs.ACTION_REFRESH) {
-                renderCurrentTime() // On force le rendu immédiatement
+                renderCurrentTime()
             }
         }
     }
@@ -67,22 +75,36 @@ class ClockToyService : Service() {
         unregisterReceiver(refreshReceiver)
     }
 
+    private fun renderCurrentTime() {
+        if (isShowingIcon || !isGlyphConnected) return
+
+        // 1. Lecture des préférences
+        val sharedPrefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+        val showBattery = sharedPrefs.getBoolean(Prefs.KEY_BATTERY, true)
+        val style = sharedPrefs.getString(Prefs.KEY_BATTERY_STYLE, "ring") ?: "ring"
+
+        // 2. Préparation des données
+        val now = LocalTime.now()
+        val hours = now.hour.toString().padStart(2, '0')
+        val minutes = now.minute.toString().padStart(2, '0')
+
+        val batteryPct = if (showBattery) {
+            val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+            bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        } else -1
+
+        // 3. Rendu du Bitmap avec le style choisi (Ring ou Gauge)
+        val bitmap = GlyphClockRenderer.render25x25(hours, minutes, batteryPct, style)
+
+        // 4. Envoi à la matrice
+        updateGlyphMatrix(bitmap)
+    }
+
     private fun showIconTemporarily(bitmap: Bitmap) {
         if (!isGlyphConnected) return
         isShowingIcon = true
 
-        val clockObject = GlyphMatrixObject.Builder()
-            .setImageSource(bitmap)
-            .setPosition(0, 0)
-            .setScale(100)
-            .setBrightness(255)
-            .build()
-
-        val frame = GlyphMatrixFrame.Builder()
-            .addTop(clockObject)
-            .build(applicationContext)
-
-        glyphMatrixManager?.setMatrixFrame(frame.render())
+        updateGlyphMatrix(bitmap)
 
         resetHandler.removeCallbacksAndMessages(null)
         resetHandler.postDelayed({
@@ -91,7 +113,22 @@ class ClockToyService : Service() {
         }, 3000)
     }
 
-    private var glyphMatrixManager: GlyphMatrixManager? = null
+    private fun updateGlyphMatrix(bitmap: Bitmap) {
+        val matrixObject = GlyphMatrixObject.Builder()
+            .setImageSource(bitmap)
+            .setPosition(0, 0)
+            .setScale(100)
+            .setBrightness(255)
+            .build()
+
+        val frame = GlyphMatrixFrame.Builder()
+            .addTop(matrixObject)
+            .build(applicationContext)
+
+        glyphMatrixManager?.setMatrixFrame(frame.render())
+    }
+
+    // --- CALLBACKS & SDK GLYPH ---
 
     private val glyphManagerCallback = object : GlyphMatrixManager.Callback {
         override fun onServiceConnected(name: ComponentName?) {
@@ -99,7 +136,6 @@ class ClockToyService : Service() {
             isGlyphConnected = true
             renderCurrentTime()
         }
-
         override fun onServiceDisconnected(name: ComponentName?) {
             isGlyphConnected = false
         }
@@ -107,18 +143,11 @@ class ClockToyService : Service() {
 
     private val serviceHandler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
-            when (msg.what) {
-                GlyphToy.MSG_GLYPH_TOY -> {
-                    val event = extractToyEvent(msg.data)
-                    when (event) {
-                        GlyphToy.EVENT_AOD -> renderCurrentTime()
-                        GlyphToy.EVENT_CHANGE -> renderCurrentTime()
-                        GlyphToy.EVENT_ACTION_DOWN,
-                        GlyphToy.EVENT_ACTION_UP,
-                        null -> {}
-                    }
+            if (msg.what == GlyphToy.MSG_GLYPH_TOY) {
+                val event = extractToyEvent(msg.data)
+                if (event == GlyphToy.EVENT_AOD || event == GlyphToy.EVENT_CHANGE) {
+                    renderCurrentTime()
                 }
-                else -> super.handleMessage(msg)
             }
         }
     }
@@ -138,45 +167,7 @@ class ClockToyService : Service() {
         return false
     }
 
-    private fun renderCurrentTime() {
-        if (isShowingIcon) return
-        if (!isGlyphConnected) return
-
-        val now = LocalTime.now()
-        val hours = now.hour.toString().padStart(2, '0')
-        val minutes = now.minute.toString().padStart(2, '0')
-
-        // 1. Lecture de la préférence utilisateur
-        val sharedPrefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
-        val showBattery = sharedPrefs.getBoolean(Prefs.KEY_BATTERY, true)
-
-        // 2. Récupération de la batterie (on passe 0 si désactivé pour que le renderer l'ignore)
-        val batteryPct = if (showBattery) {
-            val batteryManager = getSystemService(BATTERY_SERVICE) as BatteryManager
-            batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        } else {
-            -1 // On envoie -1 pour signaler au renderer de ne pas dessiner le cercle
-        }
-
-        // 3. Rendu
-        val bitmap = GlyphClockRenderer.render25x25(hours, minutes, batteryPct)
-
-        val clockObject = GlyphMatrixObject.Builder()
-            .setImageSource(bitmap)
-            .setPosition(0, 0)
-            .setScale(100)
-            .setBrightness(255)
-            .build()
-
-        val frame = GlyphMatrixFrame.Builder()
-            .addTop(clockObject)
-            .build(applicationContext)
-
-        glyphMatrixManager?.setMatrixFrame(frame.render())
-    }
-
     private fun extractToyEvent(bundle: Bundle?): String? {
-        if (bundle == null) return null
-        return bundle.getString(GlyphToy.MSG_GLYPH_TOY_DATA) ?: bundle.getString("data")
+        return bundle?.getString(GlyphToy.MSG_GLYPH_TOY_DATA) ?: bundle?.getString("data")
     }
 }

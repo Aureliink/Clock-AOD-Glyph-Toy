@@ -1,77 +1,114 @@
 package com.example.glyphclock
 
-import android.app.Activity
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.view.View
+import android.view.ViewGroup
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.radiobutton.MaterialRadioButton
 
-// Ajoute cet import
-import android.widget.Switch
-import android.content.Context
-
-// Place-le ici
+// To move in a constants file
 object Prefs {
     const val NAME = "glyph_clock_prefs"
     const val KEY_BATTERY = "show_battery"
-    const val ACTION_REFRESH = "com.example.glyphclock.REFRESH_GLYPH" // Ajout ici
+    const val KEY_BATTERY_STYLE = "battery_style"
+    const val ACTION_REFRESH = "com.example.glyphclock.REFRESH_GLYPH"
 }
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // MYou colors
+        DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
 
+        // Edge-to-edge
+        window.setDecorFitsSystemWindows(false)
+        window.statusBarColor = Color.TRANSPARENT
+
         val sharedPrefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+
+        val root = FrameLayout(this).apply {
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(Color.BLACK)
+        }
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(64, 80, 64, 80) // Plus de padding pour respirer
+            setPadding(56, 0, 56, 0)
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(container) { v, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // On applique les marges système en plus de tes paddings (64, 80...)
-            v.setPadding(insets.left + 64, insets.top + 64, insets.right + 64, insets.bottom + 64)
-            WindowInsetsCompat.CONSUMED
-        }
-
-        // --- BLOC HAUT : Titres ---
+        // --- HEADER  ---
         val title = TextView(this).apply {
-            text = getString(R.string.app_name)
-            textSize = 28f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            gravity = Gravity.CENTER
+            text = "Glyph Clock"
+            textSize = 36f
+            setTextColor(Color.WHITE)
+            typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
+            setPadding(0, 160, 0, 8)
         }
 
         val subtitle = TextView(this).apply {
-            text = "Toy AOD for Glyph Matrix"
-            textSize = 16f
-            alpha = 0.7f // Un peu plus discret
-            gravity = Gravity.CENTER
+            text = "MATRIX TOY AOD"
+            textSize = 13f
+            setTextColor(Color.GRAY)
+            letterSpacing = 0.3f
         }
 
-        // Espaceur qui pousse tout vers le bas
-        val topSpacer = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
+        // --- SETTINGS CARD  ---
+        val card = MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 100, 0, 0) }
+
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+                .setAllCornerSizes(80f)
+                .build()
+
+            strokeWidth = 4 //
+            setStrokeColor(Color.parseColor("#444444"))
+            setCardBackgroundColor(Color.parseColor("#1A1A1A"))
+            setContentPadding(64, 64, 64, 64)
         }
 
-        // --- BLOC MILIEU : Settings ---
-        val settingsLabel = TextView(this).apply {
-            text = "SETTINGS"
-            textSize = 12f
-            setPadding(0, 0, 0, 16)
-        }
+        val cardContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
-        val batterySwitch = Switch(this).apply {
-            text = "Enable battery ring"
+        // Battery switch
+        val batterySwitch = MaterialSwitch(this).apply {
+            text = "Battery Status"
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+
+            val accent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
+            val finalAccent = if (isColorTooDark(accent)) Color.WHITE else accent
+
+            thumbTintList = ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                intArrayOf(finalAccent, Color.DKGRAY)
+            )
+
+            trackTintList = ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                intArrayOf(finalAccent.adjustAlpha(0.4f), Color.parseColor("#333333"))
+            )
+
             isChecked = sharedPrefs.getBoolean(Prefs.KEY_BATTERY, true)
             setOnCheckedChangeListener { _, isChecked ->
                 sharedPrefs.edit().putBoolean(Prefs.KEY_BATTERY, isChecked).apply()
@@ -79,41 +116,131 @@ class MainActivity : Activity() {
             }
         }
 
-        // Espaceur qui pousse le bouton vers le bas
-        val bottomSpacer = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
+        val divider = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 2).apply {
+                setMargins(0, 48, 0, 48)
+            }
+            setBackgroundColor(Color.parseColor("#222222"))
         }
 
-        // --- BLOC BAS : Actions ---
-        val button = Button(this).apply {
-            text = "Open glyph toys settings"
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+        val styleLabel = TextView(this).apply {
+            text = "VISUAL STYLE"
+            setTextColor(Color.GRAY)
+            textSize = 11f
+            letterSpacing = 0.1f
+            setPadding(0, 0, 0, 32)
+        }
+
+        val styleGroup = RadioGroup(this).apply {
+            orientation = RadioGroup.HORIZONTAL
+            val currentStyle = sharedPrefs.getString(Prefs.KEY_BATTERY_STYLE, "ring")
+
+            addView(createStyleRadio("Ring", currentStyle == "ring") {
+                sharedPrefs.edit { putString(Prefs.KEY_BATTERY_STYLE, "ring") }
+                sendBroadcast(Intent(Prefs.ACTION_REFRESH))
+            })
+            addView(createStyleRadio("Gauge", currentStyle == "gauge") {
+                sharedPrefs.edit { putString(Prefs.KEY_BATTERY_STYLE, "gauge") }
+                sendBroadcast(Intent(Prefs.ACTION_REFRESH))
+            })
+        }
+
+        cardContent.addView(batterySwitch)
+        cardContent.addView(divider)
+        cardContent.addView(styleLabel)
+        cardContent.addView(styleGroup)
+        card.addView(cardContent)
+
+        // --- ACTIONS ---
+        val actionsContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM
+            ).apply { setMargins(64, 0, 64, 100) }
+        }
+
+        val openSettings = MaterialButton(this).apply {
+            text = "Manage Glyph Toys"
+
+            val systemAccent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
+            val buttonBgColor = if (isColorTooDark(systemAccent)) Color.parseColor("#EEEEEE") else systemAccent
+
+            setBackgroundColor(buttonBgColor)
+            setTextColor(getContrastColor(buttonBgColor))
+
+            cornerRadius = 100
+            setPadding(0, 48, 0, 48)
+            textSize = 16f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+
             setOnClickListener {
                 try {
                     val intent = Intent().apply {
-                        component = ComponentName(
-                            "com.nothing.thirdparty",
-                            "com.nothing.thirdparty.matrix.toys.manager.ToysManagerActivity"
-                        )
+                        component = ComponentName("com.nothing.thirdparty", "com.nothing.thirdparty.matrix.toys.manager.ToysManagerActivity")
                     }
                     startActivity(intent)
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Toy Manager not found", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
-        // Assemblage
+        actionsContainer.addView(openSettings)
+
+        // Assembly
         container.addView(title)
         container.addView(subtitle)
-        container.addView(topSpacer)     // Pousse vers le milieu
-        container.addView(settingsLabel)
-        container.addView(batterySwitch)
-        container.addView(bottomSpacer)  // Pousse vers le bas
-        container.addView(button)
+        container.addView(card)
+        root.addView(container)
+        root.addView(actionsContainer)
 
-        window.setDecorFitsSystemWindows(false)
-        setContentView(container)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
+        setContentView(root)
+    }
+
+    // Utilities functions
+    private fun createStyleRadio(label: String, checked: Boolean, onSelect: () -> Unit): MaterialRadioButton {
+        return MaterialRadioButton(this).apply {
+            text = label
+            setTextColor(Color.WHITE)
+            textSize = 15f
+
+            val accent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
+            val finalAccent = if (isColorTooDark(accent)) Color.WHITE else accent
+
+            buttonTintList = ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                intArrayOf(finalAccent, Color.GRAY)
+            )
+
+            isChecked = checked
+            layoutParams = RadioGroup.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            setOnClickListener { onSelect() }
+        }
+    }
+
+    private fun getContrastColor(color: Int): Int {
+        val darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255
+        return if (darkness < 0.5) Color.BLACK else Color.WHITE
+    }
+
+    private fun isColorTooDark(color: Int): Boolean {
+        val r = Color.red(color)
+        val g = Color.green(color)
+        val b = Color.blue(color)
+        val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+        return luminance < 0.2
+    }
+
+    private fun Int.adjustAlpha(factor: Float): Int {
+        return Color.argb((Color.alpha(this) * factor).toInt(), Color.red(this), Color.green(this), Color.blue(this))
     }
 }

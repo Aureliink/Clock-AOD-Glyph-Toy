@@ -54,19 +54,32 @@ object GlyphClockRenderer {
         return pixels
     }
 
-    fun render25x25(hours: String, minutes: String, batteryPct: Int): Bitmap {
+    fun render25x25(hours: String, minutes: String, batteryPct: Int, style: String = "ring"): Bitmap {
         val bitmap = Bitmap.createBitmap(MATRIX_SIZE, MATRIX_SIZE, Bitmap.Config.ARGB_8888)
         clear(bitmap)
+
+        // --- RÉGLAGE FIN DU DÉCALAGE ---
+        val (hourY, minuteY) = if (style == "gauge") {
+            // Mode Jauge : On écarte légèrement du centre (y=12)
+            // Par rapport à l'origine (4,14), on fait -1 et +1
+            Pair(3, 15) // <-- Le juste milieu
+        } else {
+            // Mode Ring : position standard
+            Pair(4, 14)
+        }
 
         val top = hours.padStart(2, '0').takeLast(2)
         val bottom = minutes.padStart(2, '0').takeLast(2)
 
-        drawCenteredTwoDigits(bitmap, top[0], top[1], y = 4)
-        drawCenteredTwoDigits(bitmap, bottom[0], bottom[1], y = 14)
+        drawCenteredTwoDigits(bitmap, top[0], top[1], y = hourY)
+        drawCenteredTwoDigits(bitmap, bottom[0], bottom[1], y = minuteY)
 
-        // On ne dessine le cercle que si batteryPct est différent de -1
         if (batteryPct != -1) {
-            drawBatteryCircle(bitmap, batteryPct)
+            if (style == "gauge") {
+                drawBatteryGauge(bitmap, batteryPct)
+            } else {
+                drawBatteryCircle(bitmap, batteryPct)
+            }
         }
 
         return bitmap
@@ -100,6 +113,31 @@ object GlyphClockRenderer {
         }
     }
 
+    // This will draw the battery level in a straight line
+    private fun drawBatteryGauge(bitmap: Bitmap, batteryPct: Int) {
+        val y = 12 // Centre vertical
+        val startX = 1  // Presque le bord gauche (0 est le bord absolu)
+        val endX = 23   // Presque le bord droit (24 est le bord absolu)
+        val width = endX - startX + 1 // 23 pixels de large pour un effet "bord à bord"
+
+        // Sécurité pour le pourcentage
+        val pct = batteryPct.coerceIn(0, 100)
+
+        // Calcul du nombre de pixels à allumer en blanc (en partant de la gauche)
+        val filledPixels = (width * pct) / 100
+
+        for (i in 0 until width) {
+            val x = startX + i
+            // Couleur : blanc pour la charge actuelle, gris foncé pour le reste de la barre
+            val color = if (i < filledPixels) Color.WHITE else Color.rgb(30, 30, 30)
+
+            // On dessine la jauge sur 2 pixels de hauteur (12 et 13) pour qu'elle soit plus visible ?
+            // Sinon, garde juste bitmap.setPixel(x, y, color)
+            bitmap.setPixel(x, y, color)
+        }
+    }
+
+    // This will draw the battery all around the glyph matrix
     private fun drawBatteryCircle(bitmap: Bitmap, batteryPct: Int) {
         // Sécurité pour batteryPct
         val pct = batteryPct.coerceIn(0, 100)
@@ -111,7 +149,7 @@ object GlyphClockRenderer {
         }
     }
 
-    // --- ICONES DE MODE SONORE ---
+    // --- RING MODE ICONS ---
 
     fun renderNormalIcon(batteryPct: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(MATRIX_SIZE, MATRIX_SIZE, Bitmap.Config.ARGB_8888)
@@ -123,7 +161,7 @@ object GlyphClockRenderer {
             val x = 9 + i
             for (y in (9 - i)..(15 + i)) bitmap.setPixel(x, y, Color.WHITE)
         }
-        // Ondes
+        // Waves
         intArrayOf(15,10, 16,11, 16,12, 16,13, 15,14).let { for(i in it.indices step 2) bitmap.setPixel(it[i], it[i+1], Color.WHITE) }
         return bitmap
     }
@@ -135,7 +173,7 @@ object GlyphClockRenderer {
 
         for (y in 5..19) { bitmap.setPixel(9, y, Color.WHITE); bitmap.setPixel(15, y, Color.WHITE) }
         for (x in 10..14) { bitmap.setPixel(x, 5, Color.WHITE); bitmap.setPixel(x, 19, Color.WHITE) }
-        // Vibrations (simplifié)
+        // Vibrations
         val v = intArrayOf(6,9, 5,10, 7,11, 5,12, 7,13, 5,14, 6,15, 18,9, 19,10, 17,11, 19,12, 17,13, 19,14, 18,15)
         for(i in v.indices step 2) bitmap.setPixel(v[i], v[i+1], Color.WHITE)
         return bitmap
@@ -151,7 +189,7 @@ object GlyphClockRenderer {
             val x = 9 + i
             for (y in (9 - i)..(15 + i)) bitmap.setPixel(x, y, Color.WHITE)
         }
-        // Barre oblique
+        // Dash
         for (i in 4..20) {
             if (i < MATRIX_SIZE && (24-i) < MATRIX_SIZE) {
                 bitmap.setPixel(i, 24 - i, Color.WHITE)
