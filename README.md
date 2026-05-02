@@ -7,7 +7,13 @@ A minimalist and elegant **Always-On Display (AOD)** toy designed specifically f
   <img width="639" height="576" alt="PXL_20260501_110324901 (1)" src="https://github.com/user-attachments/assets/b1b70ba6-eb40-420e-8c6d-b979af934049" />
 </p>
 
-[ ![Download APK](https://img.shields.io/badge/Download-APK-green?style=for-the-badge&logo=android) ](https://github.com/Aureliink/Clock-AOD-Glyph-Toy/releases/latest)
+<br />
+
+<p align="center">
+  <a href="https://github.com/Aureliink/Clock-AOD-Glyph-Toy/releases/latest">
+    <img src="https://img.shields.io/badge/Download-APK-green?style=for-the-badge&logo=android" alt="Download APK">
+  </a>
+</p>
 
 ---
 
