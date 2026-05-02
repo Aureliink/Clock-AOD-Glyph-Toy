@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">Glyph Clock Toy</string>
     <string name="toy_name">Clock AOD</string>
-    <string name="toy_summary">Affiche les heures en haut et les minutes en bas.</string>
+    <string name="toy_summary">A vertical-style clock toy with battery jauge</string>
 </resources>

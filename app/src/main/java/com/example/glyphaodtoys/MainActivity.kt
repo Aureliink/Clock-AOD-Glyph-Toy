@@ -27,13 +27,13 @@ class MainActivity : Activity() {
         }
 
         val subtitle = TextView(this).apply {
-            text = "Toy AOD pour Glyph Matrix\nHeures en haut, minutes en bas"
+            text = "Toy AOD for Glyph Matrix"
             textSize = 16f
             gravity = Gravity.CENTER
         }
 
         val button = Button(this).apply {
-            text = "Ouvrir le gestionnaire des Glyph Toys"
+            text = "Open glyph toys settings"
             setOnClickListener {
                 try {
                     val intent = Intent().apply {
