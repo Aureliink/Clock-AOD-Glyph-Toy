@@ -22,7 +22,6 @@ import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.radiobutton.MaterialRadioButton
 
-// To move in a constants file
 object Prefs {
     const val NAME = "glyph_clock_prefs"
     const val KEY_BATTERY = "show_battery"
@@ -33,11 +32,9 @@ object Prefs {
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // MYou colors
         DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
 
-        // Edge-to-edge
         window.setDecorFitsSystemWindows(false)
         window.statusBarColor = Color.TRANSPARENT
 
@@ -54,7 +51,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(56, 0, 56, 0)
         }
 
-        // --- HEADER  ---
+        // --- HEADER ---
         val title = TextView(this).apply {
             text = "Glyph Clock"
             textSize = 36f
@@ -70,7 +67,7 @@ class MainActivity : AppCompatActivity() {
             letterSpacing = 0.3f
         }
 
-        // --- SETTINGS CARD  ---
+        // --- SETTINGS CARD ---
         val card = MaterialCardView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -81,7 +78,7 @@ class MainActivity : AppCompatActivity() {
                 .setAllCornerSizes(80f)
                 .build()
 
-            strokeWidth = 4 //
+            strokeWidth = 4
             setStrokeColor(Color.parseColor("#444444"))
             setCardBackgroundColor(Color.parseColor("#1A1A1A"))
             setContentPadding(64, 64, 64, 64)
@@ -89,7 +86,7 @@ class MainActivity : AppCompatActivity() {
 
         val cardContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
-        // Battery switch
+        // Battery Switch
         val batterySwitch = MaterialSwitch(this).apply {
             text = "Battery Status"
             setTextColor(Color.WHITE)
@@ -131,18 +128,22 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, 0, 0, 32)
         }
 
+        // --- RADIO GROUP ---
         val styleGroup = RadioGroup(this).apply {
             orientation = RadioGroup.HORIZONTAL
             val currentStyle = sharedPrefs.getString(Prefs.KEY_BATTERY_STYLE, "ring")
 
-            addView(createStyleRadio("Ring", currentStyle == "ring") {
-                sharedPrefs.edit { putString(Prefs.KEY_BATTERY_STYLE, "ring") }
+            val radioRing = createStyleRadio("Ring", currentStyle == "ring")
+            val radioGauge = createStyleRadio("Gauge", currentStyle == "gauge")
+
+            addView(radioRing)
+            addView(radioGauge)
+
+            setOnCheckedChangeListener { _, checkedId ->
+                val selectedStyle = if (checkedId == radioRing.id) "ring" else "gauge"
+                sharedPrefs.edit { putString(Prefs.KEY_BATTERY_STYLE, selectedStyle) }
                 sendBroadcast(Intent(Prefs.ACTION_REFRESH))
-            })
-            addView(createStyleRadio("Gauge", currentStyle == "gauge") {
-                sharedPrefs.edit { putString(Prefs.KEY_BATTERY_STYLE, "gauge") }
-                sendBroadcast(Intent(Prefs.ACTION_REFRESH))
-            })
+            }
         }
 
         cardContent.addView(batterySwitch)
@@ -163,13 +164,11 @@ class MainActivity : AppCompatActivity() {
 
         val openSettings = MaterialButton(this).apply {
             text = "Manage Glyph Toys"
-
             val systemAccent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
             val buttonBgColor = if (isColorTooDark(systemAccent)) Color.parseColor("#EEEEEE") else systemAccent
 
             setBackgroundColor(buttonBgColor)
             setTextColor(getContrastColor(buttonBgColor))
-
             cornerRadius = 100
             setPadding(0, 48, 0, 48)
             textSize = 16f
@@ -187,9 +186,34 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // --- BOUTON PAYPAL ---
+        val donateButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Support the project! (PayPal)"
+            setTextColor(Color.WHITE)
+
+            cornerRadius = 100
+            setPadding(0, 40, 0, 40)
+            textSize = 14f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+
+            strokeColor = ColorStateList.valueOf(Color.parseColor("#444444"))
+            strokeWidth = 3
+
+            setOnClickListener {
+                val paypalUrl = "https://www.paypal.me/Mxiden"
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(paypalUrl))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Impossible d'ouvrir le navigateur", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        actionsContainer.addView(donateButton)
+        actionsContainer.addView(View(this).apply { layoutParams = LinearLayout.LayoutParams(0, 24) })
         actionsContainer.addView(openSettings)
 
-        // Assembly
         container.addView(title)
         container.addView(subtitle)
         container.addView(card)
@@ -205,13 +229,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
     }
 
-    // Utilities functions
-    private fun createStyleRadio(label: String, checked: Boolean, onSelect: () -> Unit): MaterialRadioButton {
+    private fun createStyleRadio(label: String, checked: Boolean): MaterialRadioButton {
         return MaterialRadioButton(this).apply {
+            id = View.generateViewId()
             text = label
             setTextColor(Color.WHITE)
             textSize = 15f
-
             val accent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
             val finalAccent = if (isColorTooDark(accent)) Color.WHITE else accent
 
@@ -219,10 +242,8 @@ class MainActivity : AppCompatActivity() {
                 arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
                 intArrayOf(finalAccent, Color.GRAY)
             )
-
             isChecked = checked
             layoutParams = RadioGroup.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            setOnClickListener { onSelect() }
         }
     }
 
@@ -232,11 +253,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isColorTooDark(color: Int): Boolean {
-        val r = Color.red(color)
-        val g = Color.green(color)
-        val b = Color.blue(color)
-        val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-
+        val luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255
         return luminance < 0.2
     }
 

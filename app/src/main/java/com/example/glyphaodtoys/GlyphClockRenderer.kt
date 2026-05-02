@@ -31,19 +31,14 @@ object GlyphClockRenderer {
         val pixels = mutableListOf<Pair<Int, Int>>()
         val cx = 12
         val cy = 12
-
         for (y in 0 until MATRIX_SIZE) {
             for (x in 0 until MATRIX_SIZE) {
                 val dx = x - cx
                 val dy = y - cy
                 val distance = Math.round(sqrt((dx * dx + dy * dy).toDouble())).toInt()
-
-                if (distance == 12) {
-                    pixels.add(Pair(x, y))
-                }
+                if (distance == 12) pixels.add(Pair(x, y))
             }
         }
-
         pixels.sortBy { pair ->
             val dx = pair.first - cx
             val dy = pair.second - cy
@@ -58,15 +53,7 @@ object GlyphClockRenderer {
         val bitmap = Bitmap.createBitmap(MATRIX_SIZE, MATRIX_SIZE, Bitmap.Config.ARGB_8888)
         clear(bitmap)
 
-        // --- RÉGLAGE FIN DU DÉCALAGE ---
-        val (hourY, minuteY) = if (style == "gauge") {
-            // Mode Jauge : On écarte légèrement du centre (y=12)
-            // Par rapport à l'origine (4,14), on fait -1 et +1
-            Pair(3, 15) // <-- Le juste milieu
-        } else {
-            // Mode Ring : position standard
-            Pair(4, 14)
-        }
+        val (hourY, minuteY) = if (style == "gauge") Pair(3, 15) else Pair(4, 14)
 
         val top = hours.padStart(2, '0').takeLast(2)
         val bottom = minutes.padStart(2, '0').takeLast(2)
@@ -75,28 +62,68 @@ object GlyphClockRenderer {
         drawCenteredTwoDigits(bitmap, bottom[0], bottom[1], y = minuteY)
 
         if (batteryPct != -1) {
-            if (style == "gauge") {
-                drawBatteryGauge(bitmap, batteryPct)
-            } else {
-                drawBatteryCircle(bitmap, batteryPct)
-            }
+            if (style == "gauge") drawBatteryGauge(bitmap, batteryPct)
+            else drawBatteryCircle(bitmap, batteryPct)
         }
-
         return bitmap
     }
 
-    private fun clear(bitmap: Bitmap) {
-        for (y in 0 until MATRIX_SIZE) {
-            for (x in 0 until MATRIX_SIZE) {
-                bitmap.setPixel(x, y, Color.BLACK)
+    // --- Animations functions ---
+
+    fun renderDigitWithOffset(bitmap: Bitmap, digit: Char, x: Int, y: Int, offsetY: Int) {
+        val glyph = digits[digit] ?: return
+        for (row in 0 until DIGIT_HEIGHT) {
+            val targetY = y + row + offsetY
+
+            if (targetY >= y && targetY < (y + DIGIT_HEIGHT)) {
+                val line = glyph[row]
+                for (col in 0 until DIGIT_WIDTH) {
+                    if (line[col] == '1') {
+                        bitmap.setPixel(x + col, targetY, Color.WHITE)
+                    }
+                }
             }
         }
+    }
+
+    // Draws the battery gauge
+    fun drawBatteryGauge(bitmap: Bitmap, batteryPct: Int) {
+        val y = 12
+        val startX = 0
+        val endX = 24
+        val width = endX - startX + 1
+
+        val pct = batteryPct.coerceIn(0, 100)
+
+        val filledPixels = Math.round((width * pct) / 100f)
+
+        for (i in 0 until width) {
+            val x = startX + i
+            val color = if (i < filledPixels) Color.WHITE else Color.rgb(30, 30, 30)
+
+            if (x in 0 until MATRIX_SIZE) {
+                bitmap.setPixel(x, y, color)
+            }
+        }
+    }
+
+    // Draws the battery circle
+    fun drawBatteryCircle(bitmap: Bitmap, batteryPct: Int) {
+        val pct = batteryPct.coerceIn(0, 100)
+        val emptyCount = circlePixels.size - ((circlePixels.size * pct) / 100)
+        for ((index, pos) in circlePixels.withIndex()) {
+            val color = if (index < emptyCount) Color.rgb(30, 30, 30) else Color.WHITE
+            bitmap.setPixel(pos.first, pos.second, color)
+        }
+    }
+
+    private fun clear(bitmap: Bitmap) {
+        for (y in 0 until MATRIX_SIZE) for (x in 0 until MATRIX_SIZE) bitmap.setPixel(x, y, Color.BLACK)
     }
 
     private fun drawCenteredTwoDigits(bitmap: Bitmap, left: Char, right: Char, y: Int) {
         val totalWidth = (DIGIT_WIDTH * 2) + DIGIT_SPACING
         val startX = (MATRIX_SIZE - totalWidth) / 2
-
         drawDigit(bitmap, left, startX, y)
         drawDigit(bitmap, right, startX + DIGIT_WIDTH + DIGIT_SPACING, y)
     }
@@ -106,63 +133,42 @@ object GlyphClockRenderer {
         for (row in 0 until DIGIT_HEIGHT) {
             val line = glyph[row]
             for (col in 0 until DIGIT_WIDTH) {
-                if (line[col] == '1') {
-                    bitmap.setPixel(startX + col, startY + row, Color.WHITE)
-                }
+                if (line[col] == '1') bitmap.setPixel(startX + col, startY + row, Color.WHITE)
             }
         }
     }
 
-    // This will draw the battery level in a straight line
-    private fun drawBatteryGauge(bitmap: Bitmap, batteryPct: Int) {
-        val y = 12 // Centre vertical
-        val startX = 1  // Presque le bord gauche (0 est le bord absolu)
-        val endX = 23   // Presque le bord droit (24 est le bord absolu)
-        val width = endX - startX + 1 // 23 pixels de large pour un effet "bord à bord"
-
-        // Sécurité pour le pourcentage
-        val pct = batteryPct.coerceIn(0, 100)
-
-        // Calcul du nombre de pixels à allumer en blanc (en partant de la gauche)
-        val filledPixels = (width * pct) / 100
-
-        for (i in 0 until width) {
-            val x = startX + i
-            // Couleur : blanc pour la charge actuelle, gris foncé pour le reste de la barre
-            val color = if (i < filledPixels) Color.WHITE else Color.rgb(30, 30, 30)
-
-            // On dessine la jauge sur 2 pixels de hauteur (12 et 13) pour qu'elle soit plus visible ?
-            // Sinon, garde juste bitmap.setPixel(x, y, color)
-            bitmap.setPixel(x, y, color)
-        }
-    }
-
-    // This will draw the battery all around the glyph matrix
-    private fun drawBatteryCircle(bitmap: Bitmap, batteryPct: Int) {
-        // Sécurité pour batteryPct
-        val pct = batteryPct.coerceIn(0, 100)
-        val emptyCount = circlePixels.size - ((circlePixels.size * pct) / 100)
-
-        for ((index, pos) in circlePixels.withIndex()) {
-            val color = if (index < emptyCount) Color.rgb(30, 30, 30) else Color.WHITE
-            bitmap.setPixel(pos.first, pos.second, color)
-        }
-    }
-
-    // --- RING MODE ICONS ---
-
+    // --- ICONS ---
     fun renderNormalIcon(batteryPct: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(MATRIX_SIZE, MATRIX_SIZE, Bitmap.Config.ARGB_8888)
         clear(bitmap)
         if (batteryPct != -1) drawBatteryCircle(bitmap, batteryPct)
 
         for (y in 10..14) for (x in 5..8) bitmap.setPixel(x, y, Color.WHITE)
+
         for (i in 0..4) {
             val x = 9 + i
             for (y in (9 - i)..(15 + i)) bitmap.setPixel(x, y, Color.WHITE)
         }
-        // Waves
-        intArrayOf(15,10, 16,11, 16,12, 16,13, 15,14).let { for(i in it.indices step 2) bitmap.setPixel(it[i], it[i+1], Color.WHITE) }
+
+        // --- (WAVES) ---
+
+        val wave1 = intArrayOf(
+            15,10, 16,11, 16,12, 16,13, 15,14
+        )
+        for(i in wave1.indices step 2) bitmap.setPixel(wave1[i], wave1[i+1], Color.WHITE)
+
+        val wave2 = intArrayOf(
+            18,8, 19,9, 20,10, 20,11, 20,12, 20,13, 20,14, 19,15, 18,16
+        )
+        for(i in wave2.indices step 2) {
+            val x = wave2[i]
+            val y = wave2[i+1]
+            if (x < MATRIX_SIZE && y >= 0 && y < MATRIX_SIZE) {
+                bitmap.setPixel(x, y, Color.WHITE)
+            }
+        }
+
         return bitmap
     }
 
