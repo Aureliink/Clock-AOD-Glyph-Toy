@@ -31,10 +31,10 @@ class ClockToyService : Service() {
     private val ringerModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == AudioManager.RINGER_MODE_CHANGED_ACTION && context != null) {
-                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                val audioManager = context.getSystemService(AUDIO_SERVICE) as AudioManager
 
                 // On récupère la batterie au moment du changement
-                val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+                val batteryManager = context.getSystemService(BATTERY_SERVICE) as BatteryManager
                 val batteryPct = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
 
                 // 2. À modifier dans ClockToyService.kt (dans ton ringerModeReceiver)
@@ -139,7 +139,7 @@ class ClockToyService : Service() {
         val minutes = now.minute.toString().padStart(2, '0')
 
         // Récupération du niveau de batterie
-        val batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        val batteryManager = getSystemService(BATTERY_SERVICE) as BatteryManager
         val batteryPct = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
 
         // Transmission du pourcentage au renderer

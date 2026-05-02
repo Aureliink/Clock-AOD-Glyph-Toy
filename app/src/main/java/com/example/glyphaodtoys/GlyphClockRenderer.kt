@@ -3,7 +3,6 @@ package com.example.glyphclock
 import android.graphics.Bitmap
 import android.graphics.Color
 import kotlin.math.atan2
-import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 object GlyphClockRenderer {
