@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fond noir -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#000000" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- Cercle de la batterie -->
+    <item android:left="6dp" android:top="6dp" android:right="6dp" android:bottom="6dp">
+        <shape android:shape="oval">
+            <stroke android:width="2dp" android:color="#FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Heures (Haut) -->
+    <item android:left="16dp" android:top="14dp" android:right="16dp" android:bottom="26dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+            <corners android:radius="1dp" />
+        </shape>
+    </item>
+
+    <!-- Minutes (Bas) -->
+    <item android:left="16dp" android:top="26dp" android:right="16dp" android:bottom="14dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+            <corners android:radius="1dp" />
+        </shape>
+    </item>
+</layer-list>
