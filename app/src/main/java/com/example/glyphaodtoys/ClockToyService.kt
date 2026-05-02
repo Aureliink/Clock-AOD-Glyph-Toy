@@ -32,12 +32,10 @@ class ClockToyService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == AudioManager.RINGER_MODE_CHANGED_ACTION && context != null) {
                 val audioManager = context.getSystemService(AUDIO_SERVICE) as AudioManager
-
-                // On récupère la batterie au moment du changement
                 val batteryManager = context.getSystemService(BATTERY_SERVICE) as BatteryManager
                 val batteryPct = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
 
-                // 2. À modifier dans ClockToyService.kt (dans ton ringerModeReceiver)
+                // On affiche l'icône de mode sonore temporairement
                 when (audioManager.ringerMode) {
                     AudioManager.RINGER_MODE_VIBRATE -> showIconTemporarily(GlyphClockRenderer.renderVibrateIcon(batteryPct))
                     AudioManager.RINGER_MODE_SILENT -> showIconTemporarily(GlyphClockRenderer.renderSilentIcon(batteryPct))
@@ -47,14 +45,26 @@ class ClockToyService : Service() {
         }
     }
 
+
+    // This will refresh the glyph when tinkering with the settings
+    private val refreshReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Prefs.ACTION_REFRESH) {
+                renderCurrentTime() // On force le rendu immédiatement
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         registerReceiver(ringerModeReceiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
+        registerReceiver(refreshReceiver, IntentFilter(Prefs.ACTION_REFRESH), Context.RECEIVER_NOT_EXPORTED)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(ringerModeReceiver)
+        unregisterReceiver(refreshReceiver)
     }
 
     private fun showIconTemporarily(bitmap: Bitmap) {
@@ -74,9 +84,7 @@ class ClockToyService : Service() {
 
         glyphMatrixManager?.setMatrixFrame(frame.render())
 
-        // On efface les anciens timers si l'utilisateur change de mode très vite
         resetHandler.removeCallbacksAndMessages(null)
-        // On remet l'horloge au bout de 3 secondes (3000 ms)
         resetHandler.postDelayed({
             isShowingIcon = false
             renderCurrentTime()
@@ -88,12 +96,12 @@ class ClockToyService : Service() {
     private val glyphManagerCallback = object : GlyphMatrixManager.Callback {
         override fun onServiceConnected(name: ComponentName?) {
             glyphMatrixManager?.register(Glyph.DEVICE_23112)
-            isGlyphConnected = true // <-- AJOUT
+            isGlyphConnected = true
             renderCurrentTime()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            isGlyphConnected = false // <-- AJOUT
+            isGlyphConnected = false
         }
     }
 
@@ -131,18 +139,26 @@ class ClockToyService : Service() {
     }
 
     private fun renderCurrentTime() {
-        if (isShowingIcon) return // <-- AJOUTER CETTE LIGNE
+        if (isShowingIcon) return
         if (!isGlyphConnected) return
 
         val now = LocalTime.now()
         val hours = now.hour.toString().padStart(2, '0')
         val minutes = now.minute.toString().padStart(2, '0')
 
-        // Récupération du niveau de batterie
-        val batteryManager = getSystemService(BATTERY_SERVICE) as BatteryManager
-        val batteryPct = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        // 1. Lecture de la préférence utilisateur
+        val sharedPrefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+        val showBattery = sharedPrefs.getBoolean(Prefs.KEY_BATTERY, true)
 
-        // Transmission du pourcentage au renderer
+        // 2. Récupération de la batterie (on passe 0 si désactivé pour que le renderer l'ignore)
+        val batteryPct = if (showBattery) {
+            val batteryManager = getSystemService(BATTERY_SERVICE) as BatteryManager
+            batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        } else {
+            -1 // On envoie -1 pour signaler au renderer de ne pas dessiner le cercle
+        }
+
+        // 3. Rendu
         val bitmap = GlyphClockRenderer.render25x25(hours, minutes, batteryPct)
 
         val clockObject = GlyphMatrixObject.Builder()
