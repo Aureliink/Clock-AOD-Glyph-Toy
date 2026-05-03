@@ -12,6 +12,8 @@ import android.content.IntentFilter
 import com.nothing.ketchum.*
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Timer
+import java.util.TimerTask
 
 class ClockToyService : Service() {
 
@@ -39,6 +41,26 @@ class ClockToyService : Service() {
         }
     }
 
+    private var timer: Timer? = null
+
+    private fun startClock() {
+        if (timer != null) return // Évite de lancer plusieurs timers
+
+        timer = Timer()
+        timer?.scheduleAtFixedRate(object : TimerTask() {
+            override fun run() {
+                // Utilise un Handler pour basculer sur le thread principal si nécessaire
+                // ou appelle directement renderCurrentTime()
+                renderCurrentTime()
+            }
+        }, 0, 1000) // Vérifie chaque seconde
+    }
+
+    private fun stopClock() {
+        timer?.cancel()
+        timer = null
+    }
+
     private val refreshReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Prefs.ACTION_REFRESH) renderCurrentTime()
@@ -49,9 +71,11 @@ class ClockToyService : Service() {
         super.onCreate()
         registerReceiver(ringerModeReceiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
         registerReceiver(refreshReceiver, IntentFilter(Prefs.ACTION_REFRESH), Context.RECEIVER_NOT_EXPORTED)
+        startClock() // Lance le timer à la création du service
     }
 
     override fun onDestroy() {
+        stopClock() // Arrête le timer pour éviter les fuites mémoire
         unregisterReceiver(ringerModeReceiver)
         unregisterReceiver(refreshReceiver)
         super.onDestroy()
@@ -159,6 +183,9 @@ class ClockToyService : Service() {
     override fun onBind(intent: Intent?): IBinder {
         glyphMatrixManager = GlyphMatrixManager.getInstance(applicationContext)
         glyphMatrixManager?.init(glyphManagerCallback)
+
+        if (timer == null) startClock() // Sécurité supplémentaire au bind
+
         return Messenger(serviceHandler).binder
     }
 
