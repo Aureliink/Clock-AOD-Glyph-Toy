@@ -1,13 +1,15 @@
 # 🕒 Clock AOD Glyph Toy
 
 ## 🚀 Overview
-A minimalist and elegant **Always-On Display (AOD)** toy designed specifically for the **Nothing Phone 3** device (for now). This application transforms the rear Glyph interface into a stylized digital clock wrapped in a dynamic circular battery indicator.
-
-<p align="center">
-  <img width="639" height="576" alt="PXL_20260501_110324901 (1)" src="https://github.com/user-attachments/assets/b1b70ba6-eb40-420e-8c6d-b979af934049" />
-</p>
-
+A minimalist and elegant **Always-On Display (AOD)** toy designed specifically for the **Nothing Phone 3** device (for now). 
+<br /><br />
+This application transforms the rear Glyph interface into a stylized digital clock wrapped in either a dynamic circular battery indicator, an horizontal one.
 <br />
+<b>You can also disable the battery indicator if you want a cleaner look with just the clock in a 2 lines AOD toy.</b>
+
+| "Ring" style | "Gauge" style  |
+|:---:|:---:|
+| <img width="450" src="https://github.com/user-attachments/assets/b1b70ba6-eb40-420e-8c6d-b979af934049" /> | <img width="450" src="https://github.com/user-attachments/assets/052fccbc-0b9d-4d38-8626-a1bc22db9cfd" /> |
 
 <p align="center">
   <a href="https://github.com/Aureliink/Clock-AOD-Glyph-Toy/releases/latest">
