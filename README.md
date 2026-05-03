@@ -16,7 +16,7 @@ A minimalist and elegant **Always-On Display (AOD)** toy designed specifically f
 
   <br />
   <br />
-  <span>The app is straightforward : it will just add a toy that you can use as an AOD vertical clock with a circular battery jauge.</span>
+  <span>The app is straightforward : it will just add a toy that you can use as an AOD vertical clock, and it comes with an option to enable either a circular battery jauge, or an horizontal one. If you want a cleaner look, you can disable the battery level completely.</span>
   <br />
   <span>An icon will also be shown for 3s when you change your ringer mode too (vibrate, silent, ringer).</span>
 </p>
