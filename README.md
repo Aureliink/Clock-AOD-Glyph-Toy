@@ -3,7 +3,7 @@
 ## 🚀 Overview
 A minimalist and elegant **Always-On Display (AOD)** toy designed specifically for the **Nothing Phone 3** device (for now). 
 <br /><br />
-This application transforms the rear Glyph interface into a stylized digital clock wrapped in either a dynamic circular battery indicator, or an horizontal one.
+This application transforms the rear Glyph interface into a stylized digital clock wrapped in either a dynamic circular battery indicator, or an horizontal one. The numbers will slowly slide down as the new one replacing it will come up from the top (like an old animated retro clock).
 <br />
 <b>You can also disable the battery indicator if you want a cleaner look with just the clock in a 2 lines AOD toy.</b>
 
