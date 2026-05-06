@@ -1,11 +1,26 @@
 # 🕒 Clock AOD Glyph Toy
 
 ## 🚀 Overview
+
+<br />
+<p style="padding-left: 15px;">
+  <b>UPDATE 2026/05/06 : THE APP IS EVOLVING ! 🚀 
+    <br />
+    The toy now also shows an animated <a href="https://i.imgur.com/ZtwsIBp.mp4" style="color: #58a6ff; text-decoration: none; font-weight: bold;">phone icon</a>   during phone calls.
+  </b>
+  <br /><br />
+    <i>And I'm already working on other features... 👀</i>
+</p>
+<br />
+
+---
+<br />
 A minimalist and elegant **Always-On Display (AOD)** toy designed specifically for the **Nothing Phone 3** device (for now). 
 <br /><br />
 This application transforms the rear Glyph interface into a stylized digital clock wrapped in either a dynamic circular battery indicator, or an horizontal one. The numbers will slowly slide down as the new one replacing it will come up from the top (like an old animated retro clock).
 <br />
 <b>You can also disable the battery indicator if you want a cleaner look with just the clock in a 2 lines AOD toy.</b>
+<br /><br />
 
 | "Ring" style | "Gauge" style  |
 |:---:|:---:|
@@ -21,7 +36,7 @@ This application transforms the rear Glyph interface into a stylized digital clo
   <span>The app is straightforward : it will just add a toy that you can use as an AOD vertical clock, and it comes with an option to enable either a circular battery jauge, or an horizontal one. If you want a cleaner look, you can disable the battery level completely.</span>
   <br />
   <span>An icon will also be shown for 3s when you change your ringer mode too (vibrate, silent, ringer).</span>
-</p>
+  </p>
 
 <br />
 
