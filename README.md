@@ -58,10 +58,13 @@ This application transforms the rear Glyph interface into a stylized digital clo
 *   **24h Format**: Clear display of hours and minutes centered on the 25x25 Glyph matrix.
 *   **Pixel-Art Font**: Custom-designed digits for maximum legibility on LED hardware.
 
-### 🔋 Dynamic Battery Ring
-*   **Visual Feedback**: A perfect LED ring surrounds the time.
-*   **Clockwise Depletion**: Unlike standard gauges, this ring empties in a natural **clockwise** motion as your battery drains.
+### 🔋 Dynamic (optional) Battery Level
+*   **Ring style**: A perfect LED ring surrounds the time, empties in a natural **clockwise** motion as your battery drains.
+*   **Gauge style**: An horizontal bar depleting from right to left, located between the hours and the minutes, right in the middle of the Matrix
 *   **Math-Optimized**: Precise rendering logic ensures a smooth circle without "double pixels" or gaps.
+
+### 📞 Phone call status
+Enable an animated phone icon during your phone calls
 
 ### 🔔 System Status Icons
 The clock automatically reacts to your ringer mode changes for 3 seconds before returning to the time:
@@ -76,7 +79,7 @@ The design is rendered on a 25x25 grid:
 
 * Top: Hours (custom retro-digital font).
 * Bottom: Minutes.
-* Border: Battery level (Circular pixel-art ring).
+* Border: Battery level (Circular pixel-art ring) or Horizontal (between hours and minutes)
 
 ---
 
