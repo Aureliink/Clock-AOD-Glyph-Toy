@@ -13,8 +13,6 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.DynamicColors
@@ -27,6 +25,7 @@ object Prefs {
     const val KEY_BATTERY = "show_battery"
     const val KEY_BATTERY_STYLE = "battery_style"
     const val ACTION_REFRESH = "com.example.glyphclock.REFRESH_GLYPH"
+    const val KEY_CALL_ICON = "show_call_icon"
 }
 
 class MainActivity : AppCompatActivity() {
@@ -35,89 +34,75 @@ class MainActivity : AppCompatActivity() {
         DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
 
-        window.setDecorFitsSystemWindows(false)
-        window.statusBarColor = Color.TRANSPARENT
+        val sharedPrefs = getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
 
-        val sharedPrefs = getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+        if (checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.READ_PHONE_STATE), 101)
+        }
+
 
         val root = FrameLayout(this).apply {
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             setBackgroundColor(Color.BLACK)
         }
 
+        val scrollView = ScrollView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            isVerticalScrollBarEnabled = false
+        }
+
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(56, 0, 56, 0)
+            setPadding(56, 0, 56, 450)
         }
 
         // --- HEADER ---
-        val title = TextView(this).apply {
-            text = "Glyph Clock"
+        container.addView(TextView(this).apply {
+            text = "Clock AOD Glyph toy"
             textSize = 36f
             setTextColor(Color.WHITE)
             typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
             setPadding(0, 160, 0, 8)
-        }
+        })
 
-        val subtitle = TextView(this).apply {
+        container.addView(TextView(this).apply {
             text = "MATRIX TOY AOD"
             textSize = 13f
             setTextColor(Color.GRAY)
             letterSpacing = 0.3f
-        }
+        })
 
-        // --- SETTINGS CARD ---
-        val card = MaterialCardView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, 100, 0, 0) }
+        // --- CARD 1 : BATTERY ---
+        val batteryCard = createSettingsCard()
+        val batteryContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
-            shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                .setAllCornerSizes(80f)
-                .build()
-
-            strokeWidth = 4
-            setStrokeColor(Color.parseColor("#444444"))
-            setCardBackgroundColor(Color.parseColor("#1A1A1A"))
-            setContentPadding(64, 64, 64, 64)
-        }
-
-        val cardContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-
-        // Battery Switch
         val batterySwitch = MaterialSwitch(this).apply {
             text = "Battery Status"
             setTextColor(Color.WHITE)
             textSize = 18f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setupColors()
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
 
-            val accent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
-            val finalAccent = if (isColorTooDark(accent)) Color.WHITE else accent
-
-            thumbTintList = ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(finalAccent, Color.DKGRAY)
-            )
-
-            trackTintList = ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(finalAccent.adjustAlpha(0.4f), Color.parseColor("#333333"))
-            )
-
+            // 1. On applique d'abord la valeur
             isChecked = sharedPrefs.getBoolean(Prefs.KEY_BATTERY, true)
+
+            // 2. On n'écoute le changement QU'APRÈS pour éviter le faux départ
             setOnCheckedChangeListener { _, isChecked ->
                 sharedPrefs.edit().putBoolean(Prefs.KEY_BATTERY, isChecked).apply()
                 sendBroadcast(Intent(Prefs.ACTION_REFRESH))
             }
         }
 
-        val divider = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 2).apply {
-                setMargins(0, 48, 0, 48)
-            }
-            setBackgroundColor(Color.parseColor("#222222"))
+        // Utilisation d'une icône de batterie plus moderne (éclat/bolt)
+        val batteryHeader = createHeaderWithIcon(android.R.drawable.ic_lock_idle_charging, batterySwitch, 0f)
+
+        val batteryDescription = TextView(this).apply {
+            text = "Displays a gauge or a circle depending on the battery level"
+            setTextColor(Color.GRAY)
+            textSize = 14f
+            setPadding(96, 8, 0, 0) // Aligné avec le texte du switch (icon 64 + margin 32)
         }
 
         val styleLabel = TextView(this).apply {
@@ -125,20 +110,19 @@ class MainActivity : AppCompatActivity() {
             setTextColor(Color.GRAY)
             textSize = 11f
             letterSpacing = 0.1f
-            setPadding(0, 0, 0, 32)
+            setPadding(96, 32, 0, 24)
         }
 
-        // --- RADIO GROUP ---
         val styleGroup = RadioGroup(this).apply {
             orientation = RadioGroup.HORIZONTAL
+            setPadding(96, 0, 0, 0)
             val currentStyle = sharedPrefs.getString(Prefs.KEY_BATTERY_STYLE, "ring")
-
             val radioRing = createStyleRadio("Ring", currentStyle == "ring")
             val radioGauge = createStyleRadio("Gauge", currentStyle == "gauge")
-
             addView(radioRing)
             addView(radioGauge)
 
+            // On n'attribue l'écouteur qu'après avoir ajouté les boutons pré-cochés
             setOnCheckedChangeListener { _, checkedId ->
                 val selectedStyle = if (checkedId == radioRing.id) "ring" else "gauge"
                 sharedPrefs.edit { putString(Prefs.KEY_BATTERY_STYLE, selectedStyle) }
@@ -146,67 +130,73 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        cardContent.addView(batterySwitch)
-        cardContent.addView(divider)
-        cardContent.addView(styleLabel)
-        cardContent.addView(styleGroup)
-        card.addView(cardContent)
+        batteryContent.addView(batteryHeader)
+        batteryContent.addView(batteryDescription)
+        batteryContent.addView(styleLabel)
+        batteryContent.addView(styleGroup)
+        batteryCard.addView(batteryContent)
+        container.addView(batteryCard)
 
-        // --- ACTIONS ---
+        // --- CARD 2 : PHONE CALLS ---
+        val callCard = createSettingsCard()
+        val callContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        val callSwitch = MaterialSwitch(this).apply {
+            text = "Phone call status"
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setupColors()
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            isChecked = sharedPrefs.getBoolean(Prefs.KEY_CALL_ICON, true)
+            setOnCheckedChangeListener { _, isChecked ->
+                sharedPrefs.edit().putBoolean(Prefs.KEY_CALL_ICON, isChecked).apply()
+            }
+        }
+
+        // Icône téléphone avec rotation de -45 degrés pour pointer vers le haut à droite
+        val callHeader = createHeaderWithIcon(android.R.drawable.sym_action_call, callSwitch, -90f)
+
+        val callDescription = TextView(this).apply {
+            text = "Displays an animated phone icon during a phone call"
+            setTextColor(Color.GRAY)
+            textSize = 14f
+            setPadding(96, 8, 0, 0)
+        }
+
+        callContent.addView(callHeader)
+        callContent.addView(callDescription)
+        callCard.addView(callContent)
+        container.addView(callCard)
+
+        // --- ACTIONS CONTAINER ---
         val actionsContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM
-            ).apply { setMargins(64, 0, 64, 100) }
+            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM)
+            setPadding(64, 0, 64, 100)
+        }
+
+        val donateButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Support the project! (PayPal)"
+            setTextColor(Color.WHITE)
+            cornerRadius = 100
+            setPadding(0, 40, 0, 40)
+            strokeColor = ColorStateList.valueOf(Color.parseColor("#444444"))
+            strokeWidth = 3
+            setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.paypal.me/Mxiden"))) }
         }
 
         val openSettings = MaterialButton(this).apply {
             text = "Manage Glyph Toys"
-            val systemAccent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
-            val buttonBgColor = if (isColorTooDark(systemAccent)) Color.parseColor("#EEEEEE") else systemAccent
-
-            setBackgroundColor(buttonBgColor)
-            setTextColor(getContrastColor(buttonBgColor))
+            val accent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
+            val btnColor = if (isColorTooDark(accent)) Color.parseColor("#EEEEEE") else accent
+            setBackgroundColor(btnColor)
+            setTextColor(getContrastColor(btnColor))
             cornerRadius = 100
             setPadding(0, 48, 0, 48)
-            textSize = 16f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-
             setOnClickListener {
-                try {
-                    val intent = Intent().apply {
-                        component = ComponentName("com.nothing.thirdparty", "com.nothing.thirdparty.matrix.toys.manager.ToysManagerActivity")
-                    }
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "Toy Manager not found", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        // --- BOUTON PAYPAL ---
-        val donateButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Support the project! (PayPal)"
-            setTextColor(Color.WHITE)
-
-            cornerRadius = 100
-            setPadding(0, 40, 0, 40)
-            textSize = 14f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-
-            strokeColor = ColorStateList.valueOf(Color.parseColor("#444444"))
-            strokeWidth = 3
-
-            setOnClickListener {
-                val paypalUrl = "https://www.paypal.me/Mxiden"
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(paypalUrl))
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "Impossible d'ouvrir le navigateur", Toast.LENGTH_SHORT).show()
-                }
+                try { startActivity(Intent().apply { component = ComponentName("com.nothing.thirdparty", "com.nothing.thirdparty.matrix.toys.manager.ToysManagerActivity") }) }
+                catch (e: Exception) { Toast.makeText(this@MainActivity, "Toy Manager not found", Toast.LENGTH_SHORT).show() }
             }
         }
 
@@ -214,19 +204,45 @@ class MainActivity : AppCompatActivity() {
         actionsContainer.addView(View(this).apply { layoutParams = LinearLayout.LayoutParams(0, 24) })
         actionsContainer.addView(openSettings)
 
-        container.addView(title)
-        container.addView(subtitle)
-        container.addView(card)
-        root.addView(container)
+        scrollView.addView(container)
+        root.addView(scrollView)
         root.addView(actionsContainer)
-
-        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
         setContentView(root)
+    }
+
+    private fun createHeaderWithIcon(iconRes: Int, switch: MaterialSwitch, rotation: Float): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+
+            val icon = ImageView(context).apply {
+                setImageResource(iconRes)
+                imageTintList = ColorStateList.valueOf(Color.WHITE)
+                this.rotation = rotation
+                layoutParams = LinearLayout.LayoutParams(64, 64).apply { marginEnd = 32 }
+            }
+
+            addView(icon)
+            addView(switch)
+        }
+    }
+
+    private fun createSettingsCard(): MaterialCardView {
+        return MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 48, 0, 0) }
+            shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(72f).build()
+            strokeWidth = 3
+            setStrokeColor(Color.parseColor("#222222"))
+            setCardBackgroundColor(Color.parseColor("#111111"))
+            setContentPadding(56, 56, 56, 56)
+        }
+    }
+
+    private fun MaterialSwitch.setupColors() {
+        val accent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
+        val finalAccent = if (isColorTooDark(accent)) Color.WHITE else accent
+        thumbTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(finalAccent, Color.DKGRAY))
+        trackTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(finalAccent.adjustAlpha(0.3f), Color.parseColor("#222222")))
     }
 
     private fun createStyleRadio(label: String, checked: Boolean): MaterialRadioButton {
@@ -234,14 +250,9 @@ class MainActivity : AppCompatActivity() {
             id = View.generateViewId()
             text = label
             setTextColor(Color.WHITE)
-            textSize = 15f
             val accent = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
             val finalAccent = if (isColorTooDark(accent)) Color.WHITE else accent
-
-            buttonTintList = ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(finalAccent, Color.GRAY)
-            )
+            buttonTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(finalAccent, Color.GRAY))
             isChecked = checked
             layoutParams = RadioGroup.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
