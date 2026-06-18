@@ -70,7 +70,7 @@ This application transforms the rear Glyph interface into a stylized digital clo
 *   **Ring style**: A perfect LED ring surrounds the time, empties in a natural **clockwise** motion as your battery drains.
 *   **Gauge style**: An horizontal bar depleting from right to left, located between the hours and the minutes, right in the middle of the Matrix
 *   **Math-Optimized**: Precise rendering logic ensures a smooth circle without "double pixels" or gaps.
-*   **MCharging animation**: The gauge will slowly fill up while charging the phone.
+*   **Charging animation**: The gauge will slowly fill up while charging the phone.
 
 ### 📞 Phone call status
 Enable an animated phone icon during your phone calls
