@@ -4,6 +4,7 @@
     <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
     <uses-permission android:name="com.nothing.glyph.permission.USE_GLYPH" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:icon="@mipmap/ic_launcher"
@@ -43,6 +44,16 @@
             <meta-data
                 android:name="com.nothing.glyph.toy.aod_support"
                 android:value="1" />
+        </service>
+
+        <service
+            android:name=".MyNotificationListener"
+            android:label="GlyphClock Visualizer Link"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
         </service>
 
     </application>

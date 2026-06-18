@@ -26,6 +26,9 @@ object Prefs {
     const val KEY_BATTERY_STYLE = "battery_style"
     const val ACTION_REFRESH = "com.example.glyphclock.REFRESH_GLYPH"
     const val KEY_CALL_ICON = "show_call_icon"
+    const val KEY_VISUALIZER = "show_visualizer"
+    const val KEY_VISUALIZER_STYLE = "visualizer_style"
+    const val KEY_TIME_FORMAT_12H = "time_format_12h"
 }
 
 class MainActivity : AppCompatActivity() {
@@ -36,14 +39,20 @@ class MainActivity : AppCompatActivity() {
 
         val sharedPrefs = getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
 
+        // Needed for the phone calling status
         if (checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.READ_PHONE_STATE), 101)
         }
 
+        // Needed for the music visualizer
+        //val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+        //startActivity(intent)
 
         val root = FrameLayout(this).apply {
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             setBackgroundColor(Color.BLACK)
+
+            fitsSystemWindows = true
         }
 
         val scrollView = ScrollView(this).apply {
@@ -54,7 +63,7 @@ class MainActivity : AppCompatActivity() {
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(56, 0, 56, 450)
+            setPadding(56, 0, 56, 460)
         }
 
         // --- HEADER ---
@@ -72,6 +81,41 @@ class MainActivity : AppCompatActivity() {
             setTextColor(Color.GRAY)
             letterSpacing = 0.3f
         })
+
+        // --- CARD : CLOCK SETTINGS ---
+        val clockCard = createSettingsCard()
+        val clockContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        val formatSwitch = MaterialSwitch(this).apply {
+            text = "Format 12h (AM/PM)"
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setupColors()
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+
+            isChecked = sharedPrefs.getBoolean(Prefs.KEY_TIME_FORMAT_12H, false)
+
+            setOnCheckedChangeListener { _, isChecked ->
+                sharedPrefs.edit().putBoolean(Prefs.KEY_TIME_FORMAT_12H, isChecked).apply()
+                sendBroadcast(Intent(Prefs.ACTION_REFRESH))
+            }
+        }
+
+        // Icône d'horloge native Android
+        val clockHeader = createHeaderWithIcon(android.R.drawable.ic_lock_idle_alarm, formatSwitch, 0f)
+
+        val clockDescription = TextView(this).apply {
+            text = "If enabled, switches to a 12h format clock"
+            setTextColor(Color.GRAY)
+            textSize = 14f
+            setPadding(96, 8, 0, 24)
+        }
+
+        clockContent.addView(clockHeader)
+        clockContent.addView(clockDescription)
+        clockCard.addView(clockContent)
+        container.addView(clockCard)
 
         // --- CARD 1 : BATTERY ---
         val batteryCard = createSettingsCard()
@@ -169,11 +213,76 @@ class MainActivity : AppCompatActivity() {
         callCard.addView(callContent)
         container.addView(callCard)
 
+        // --- CARD 3 : MUSIC VISUALIZER ---
+        val musicCard = createSettingsCard()
+        val musicContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        val musicSwitch = MaterialSwitch(this).apply {
+            text = "Music Visualizer"
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setupColors()
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+
+            isChecked = sharedPrefs.getBoolean(Prefs.KEY_VISUALIZER, true)
+
+            setOnCheckedChangeListener { _, isChecked ->
+                sharedPrefs.edit().putBoolean(Prefs.KEY_VISUALIZER, isChecked).apply()
+                // On notifie pour couper instantanément l'affichage si on désactive en pleine lecture
+                sendBroadcast(Intent(Prefs.ACTION_REFRESH).apply {
+                    putExtra("is_visualizer", true)
+                    putExtra("is_playing", false)
+                })
+            }
+        }
+
+        // Utilisation de l'icône multimédia standard (note de musique / play)
+        val musicHeader = createHeaderWithIcon(android.R.drawable.ic_media_play, musicSwitch, 0f)
+
+        val musicDescription = TextView(this).apply {
+            text = "Displays an animated visualizer when music or media is playing"
+            setTextColor(Color.GRAY)
+            textSize = 14f
+            setPadding(96, 8, 0, 0)
+        }
+
+        val musicStyleLabel = TextView(this).apply {
+            text = "VISUALIZER STYLE"
+            setTextColor(Color.GRAY)
+            textSize = 11f
+            letterSpacing = 0.1f
+            setPadding(96, 32, 0, 24)
+        }
+
+        val musicStyleGroup = RadioGroup(this).apply {
+            orientation = RadioGroup.HORIZONTAL
+            setPadding(96, 0, 0, 0)
+            val currentMusicStyle = sharedPrefs.getString(Prefs.KEY_VISUALIZER_STYLE, "bars")
+            val radioBars = createStyleRadio("Wave Bars", currentMusicStyle == "bars")
+            val radioCD = createStyleRadio("Spinning CD", currentMusicStyle == "cd")
+            addView(radioBars)
+            addView(radioCD)
+
+            setOnCheckedChangeListener { _, checkedId ->
+                val selectedStyle = if (checkedId == radioBars.id) "bars" else "cd"
+                sharedPrefs.edit { putString(Prefs.KEY_VISUALIZER_STYLE, selectedStyle) }
+            }
+        }
+
+        musicContent.addView(musicHeader)
+        musicContent.addView(musicDescription)
+        musicContent.addView(musicStyleLabel)
+        musicContent.addView(musicStyleGroup)
+        musicCard.addView(musicContent)
+        container.addView(musicCard)
+
         // --- ACTIONS CONTAINER ---
         val actionsContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM)
-            setPadding(64, 0, 64, 100)
+            setPadding(64, 32, 64, 100)
+            setBackgroundColor(Color.BLACK)
         }
 
         val donateButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
@@ -183,6 +292,9 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, 40, 0, 40)
             strokeColor = ColorStateList.valueOf(Color.parseColor("#444444"))
             strokeWidth = 3
+
+            // AJOUT : Rendre le bouton opaque
+            backgroundTintList = ColorStateList.valueOf(Color.BLACK)
             setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.paypal.me/Mxiden"))) }
         }
 
