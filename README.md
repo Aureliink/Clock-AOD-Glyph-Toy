@@ -4,12 +4,17 @@
 
 <br />
 <p style="padding-left: 15px;">
-  <b>UPDATE 2026/05/06 : THE APP IS EVOLVING ! 🚀 
+  <b>UPDATE 2026/06/18 : THE APP KEEPS EVOLVING ! 🚀 
     <br />
-    The toy now also shows an animated <a href="https://i.imgur.com/ZtwsIBp.mp4" style="color: #58a6ff; text-decoration: none; font-weight: bold;">phone icon</a>   during phone calls.
+    <ul>
+      <li>
+    🕛 Added a 12h format toggle
+      </li>
+      <li>
+        🎶 Added a Music Visualizer with 2 different styles (still a work in progress regarding its reliability!)
+      </li>
+    </ul>
   </b>
-  <br /><br />
-    <i>And I'm already working on other features... 👀</i>
 </p>
 <br />
 
@@ -55,8 +60,12 @@ This application transforms the rear Glyph interface into a stylized digital clo
 ## ✨ Key Features
 
 ### 🕒 Smart Digital Clock
-*   **24h Format**: Clear display of hours and minutes centered on the 25x25 Glyph matrix.
+*   **12 or 24h Format**: Clear display of hours and minutes centered on the 25x25 Glyph matrix.
 *   **Pixel-Art Font**: Custom-designed digits for maximum legibility on LED hardware.
+
+### 🎶 Music Visualizer
+*   🔊 **Waves**: Moving and pulsating waves that mimicks Nothing's style.
+*   💿 **Spinning vinyl**: A spinning vinyl that takes full advantage of the whole size of the Glyph Matrix.
 
 ### 🔋 Dynamic (optional) Battery Level
 *   **Ring style**: A perfect LED ring surrounds the time, empties in a natural **clockwise** motion as your battery drains.
